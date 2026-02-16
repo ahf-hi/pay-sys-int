@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <title>Secure Payment Gateway</title>
+</head>
+<body>
+    <div class="controls-container">
+        <h2>Secure Checkout</h2>
+        
+        <div class="section">
+            <label for="display_amt">Amount (MYR):</label>
+            <input type="number" id="display_amt" step="0.01" placeholder="0.00">
+        </div>
+
+        <div class="section">
+            <label>Select Payment Method:</label>
+            <select id="method_selector" onchange="loadPaymentForm(this.value)">
+                <option value="">-- Select --</option>
+                <option value="VisaMaster">Visa & MasterCard</option>
+                <option value="fpx">FPX</option>
+                <option value="ewallets">E-Wallets</option>
+                <option value="duitnowqr">DuitNow QR</option>
+            </select>
+        </div>
+
+        <hr>
+
+        <div id="dynamic-form-container">
+            <p style="color: #666;">Select a payment method to view details.</p>
+        </div>
+
+        <button type="button" id="pay-btn" onclick="processPayment()">Pay Now</button>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
