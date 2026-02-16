@@ -1,41 +1,24 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="css/style.css">
-    <title>Secure Payment Page</title>
-</head>
 <body>
     <div class="checkout-wrapper">
-    <div class="controls-container">
-        <h2>Checkout</h2>
-        
-        <div class="section">
-            <label for="display_amt">Amount (MYR):</label>
-            <input type="number" id="display_amt" step="0.01" placeholder="0.00">
+        <div class="controls-container">
+            <h2>Secure Checkout</h2>
+            <div class="section">
+                 <label>Amount (MYR)</label>
+                 <input type="number" id="display_amt" step="0.01">
+            </div>
+            <div class="section">
+                 <label>Payment Method</label>
+                 <select id="method_selector" onchange="loadPaymentForm(this.value)">
+                    <option value="">-- Select --</option>
+                    <option value="VisaMaster">Card</option>
+                    <option value="fpx">FPX</option>
+                    <option value="ewallets">E-Wallet</option>
+                    <option value="duitnowqr">DuitNow QR</option>
+                 </select>
+            </div>
+            <hr>
+            <div id="dynamic-form-container"></div>
+            <button onclick="processPayment()" id="pay-btn">Pay Now</button>
         </div>
-
-        <div class="section">
-            <label for="method_selector">Payment Method:</label>
-            <select id="method_selector" onchange="loadPaymentForm(this.value)">
-                <option value="">-- Select Method --</option>
-                <option value="VisaMaster">Visa & MasterCard</option>
-                <option value="fpx">FPX</option>
-                <option value="ewallets">E-Wallets</option>
-                <option value="duitnowqr">DuitNow QR</option>
-            </select>
-        </div>
-
-        <hr>
-
-        <div id="dynamic-form-container">
-            <p style="text-align: center; color: #888;">Select a payment method to continue.</p>
-        </div>
-
-        <button type="button" id="pay-btn" onclick="processPayment()">Pay Now</button>
     </div>
-</div>
-    <script src="script.js"></script>
 </body>
-</html>
