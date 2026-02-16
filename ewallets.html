@@ -1,9 +1,11 @@
 <form id="payment-form" data-mkreq="https://devlinkv2.paydee.co/mpigw/mkReq" data-mpreq="https://devlinkv2.paydee.co/mpigw/mpReq">
-    <label>Transaction Type:</label>
-    <select name="MPI_TRANS_TYPE">
-        <option value="SALES">SALES</option>
-        <option value="VSALES">VSALES</option>
-    </select>
+    <div class="section">
+        <label>Transaction Type:</label>
+        <select name="MPI_TRANS_TYPE">
+            <option value="SALES">SALES</option>
+            <option value="VSALES">VSALES</option>
+        </select>
+    </div>
 
     <input type="hidden" name="MPI_MERC_ID">
     <input type="hidden" name="MPI_TRXN_ID">
@@ -12,9 +14,12 @@
     <input type="hidden" name="MPI_PURCH_AMT">
     <input type="hidden" name="MPI_RETURN_URL">
 
-    <label>Select E-Wallet:</label>
-    <select name="MPI_PAYMENT_CHANNEL_ID">
-        <option value="">-- Loading Wallets --</option>
-    </select>
+    <div class="section">
+        <label>Select E-Wallet:</label>
+        <select name="MPI_PAYMENT_CHANNEL_ID">
+            <option value="">-- Loading Wallets --</option>
+        </select>
+    </div>
+    
     <textarea name="MPI_MAC" style="display:none"></textarea>
 </form>
