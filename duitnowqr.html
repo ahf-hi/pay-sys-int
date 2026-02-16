@@ -1,4 +1,4 @@
-<form id="payment-form" data-mkreq="https://devlinkv2.paydee.co/mpigw/mkReq" data-mpreq="https://devlinkv2.paydee.co/mpigw/mpReq" method="POST">
+<form id="payment-form" data-mkreq="https://devlinkv2.paydee.co/mpigw/mkReq" data-mpreq="https://devlinkv2.paydee.co/mpigw/mpReq">
     <input type="hidden" name="MPI_TRANS_TYPE" value="SALES">
     <input type="hidden" name="MPI_MERC_ID">
     <input type="hidden" name="MPI_TRXN_ID">
@@ -6,7 +6,10 @@
     <input type="hidden" name="MPI_PURCH_CURR" value="458">
     <input type="hidden" name="MPI_PURCH_AMT">
     <input type="hidden" name="MPI_RETURN_URL">
-    
-    <p>Redirecting to DuitNow QR Gateway...</p>
+
+    <div style="padding: 20px; border: 1px dashed #ccc; text-align: center;">
+        <p>A DuitNow QR code will be generated on the next page.</p>
+    </div>
+
     <textarea name="MPI_MAC" style="display:none"></textarea>
 </form>
