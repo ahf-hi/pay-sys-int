@@ -4,11 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="style.css">
-    <title>Secure Payment Gateway</title>
+    <title>Secure Payment Page</title>
 </head>
 <body>
     <div class="controls-container">
-        <h2>Secure Checkout</h2>
+        <h2>Checkout</h2>
         
         <div class="section">
             <label for="display_amt">Amount (MYR):</label>
@@ -16,9 +16,9 @@
         </div>
 
         <div class="section">
-            <label>Select Payment Method:</label>
+            <label for="method_selector">Payment Method:</label>
             <select id="method_selector" onchange="loadPaymentForm(this.value)">
-                <option value="">-- Select --</option>
+                <option value="">-- Select Method --</option>
                 <option value="VisaMaster">Visa & MasterCard</option>
                 <option value="fpx">FPX</option>
                 <option value="ewallets">E-Wallets</option>
@@ -29,7 +29,7 @@
         <hr>
 
         <div id="dynamic-form-container">
-            <p style="color: #666;">Select a payment method to view details.</p>
+            <p style="text-align: center; color: #888;">Select a payment method to continue.</p>
         </div>
 
         <button type="button" id="pay-btn" onclick="processPayment()">Pay Now</button>
