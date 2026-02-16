@@ -29,10 +29,10 @@ SL+FRlqBUM8bvGHdPzXV8CLr5NlItcINVHiCO70UmTCNx7b0Ga3vFsVhG8h9VQZu
 BjUoANFzgScOUTPCSQACXQ==
 -----END PRIVATE KEY-----`,
     MID: "000000000000006",
-    VERCEL_CALLBACK_URL: "https://sys-int-nine.vercel.app/api/callback"
+    CALLBACK: "https://sys-int-nine.vercel.app/api/callback"
 };
 
-/** 1. LOAD FORM TEMPLATE **/
+/** Load Form **/
 async function loadPaymentForm(method) {
     if (!method) return;
     const container = document.getElementById('dynamic-form-container');
@@ -43,12 +43,9 @@ async function loadPaymentForm(method) {
 
         if (method === 'fpx' || method === 'ewallets') {
             const form = document.getElementById('payment-form');
-            // We pass the mkReq URL defined in the form's data-attribute
             await fetchChannelsWithHandshake(form.dataset.mkreq);
         }
-    } catch (err) {
-        console.error("Template Load Error:", err);
-    }
+    } catch (err) { console.error(err); }
 }
 
 function initFormFields(method) {
@@ -56,7 +53,7 @@ function initFormFields(method) {
     setFieldValue("MPI_PURCH_DATE", ts);
     setFieldValue("MPI_TRXN_ID", (method === 'duitnowqr' ? "DNQR" : "PAY") + ts);
     setFieldValue("MPI_MERC_ID", CONFIG.MID);
-    setFieldValue("MPI_RETURN_URL", CONFIG.VERCEL_CALLBACK_URL);
+    setFieldValue("MPI_RETURN_URL", CONFIG.CALLBACK);
 }
 
 function setFieldValue(name, value) {
@@ -64,15 +61,15 @@ function setFieldValue(name, value) {
     if (el) el.value = value;
 }
 
-/** 2. CHANNELS HANDSHAKE (The Fixed Function) **/
+/** FETCH CHANNELS (FIXED) **/
 async function fetchChannelsWithHandshake(mkReqUrl) {
     const channelTrxnId = "CHNL" + Date.now();
     const select = document.getElementsByName("MPI_PAYMENT_CHANNEL_ID")[0];
 
     try {
-        // --- FIXED: Added method: 'POST' ---
+        // HANDSHAKE 1: mkReq
         const mkRes = await fetch(mkReqUrl, {
-            method: 'POST', 
+            method: 'POST', // CRITICAL FIX
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 "merchantId": CONFIG.MID,
@@ -81,44 +78,42 @@ async function fetchChannelsWithHandshake(mkReqUrl) {
             })
         });
         const mkData = await mkRes.json();
-        if (mkData.errorCode !== "000") throw new Error("Channel mkReq Failed");
+        if (mkData.errorCode !== "000") throw new Error("Handshake Failed");
 
-        // 2. Fetch actual channel list
-        const macString = CONFIG.MID + channelTrxnId;
+        // REQUEST 2: channels list
         const cnlRes = await fetch("https://devlinkv2.paydee.co/mpigw/channels", {
-            method: 'POST',
+            method: 'POST', // CRITICAL FIX
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 "MPI_MERC_ID": CONFIG.MID, 
                 "MPI_TRXN_ID": channelTrxnId, 
-                "MPI_MAC": macString 
+                "MPI_MAC": CONFIG.MID + channelTrxnId 
             })
         });
         const cnlData = await cnlRes.json();
 
         if (cnlData.MPI_PAYMENT_CHANNEL) {
-            select.innerHTML = '<option value="">-- Choose Provider --</option>';
+            select.innerHTML = '<option value="">-- Select Provider --</option>';
             cnlData.MPI_PAYMENT_CHANNEL.forEach(ch => {
                 const opt = document.createElement("option");
                 opt.value = ch.MPI_CHANNEL_ID;
                 opt.innerText = ch.MPI_CHANNEL_NAME;
-                if (ch.MPI_CHANNEL_STATUS !== 'A') opt.disabled = true;
                 select.appendChild(opt);
             });
         }
     } catch (e) {
         console.error("Channel Error:", e);
-        if(select) select.innerHTML = '<option value="">Error loading providers</option>';
+        if(select) select.innerHTML = '<option value="">Error loading list</option>';
     }
 }
 
-/** 3. FINAL PAYMENT PROCESS **/
+/** PROCESS PAYMENT **/
 async function processPayment() {
     const form = document.getElementById("payment-form");
     const method = document.getElementById("method_selector").value;
     const amount = document.getElementById("display_amt").value;
     
-    if (!amount || !form) return alert("Please enter amount and select method.");
+    if (!amount || !form) return alert("Fill required fields");
 
     setFieldValue("MPI_PURCH_AMT", Math.round(parseFloat(amount) * 100));
 
@@ -128,9 +123,7 @@ async function processPayment() {
         "purchaseId": document.getElementsByName("MPI_TRXN_ID")[0].value
     };
 
-    if (method === 'duitnowqr') {
-        mkReqPayload.paymentMethod = "DNQR";
-    }
+    if (method === 'duitnowqr') mkReqPayload.paymentMethod = "DNQR";
 
     try {
         const res = await fetch(form.dataset.mkreq, {
@@ -161,9 +154,7 @@ async function processPayment() {
         form.action = form.dataset.mpreq;
         form.method = "POST";
         form.submit();
-    } catch (err) {
-        alert("Payment Handshake Failed: " + err.message);
-    }
+    } catch (err) { alert(err.message); }
 }
 
 async function signData(message, pem) {
