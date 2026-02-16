@@ -1,6 +1,3 @@
-/**
- * CONFIGURATION
- */
 const CONFIG = {
     PUBLICKEY: "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAq8j2SHHfzMLlhYppnlk-QqjjjZwMkhK6s6rERd0JhhY_6-Md4Z0327uEdfNbJrSEPJVPT55gjRhx4MorEhrabuafuY8thSPS4epwkOjjPtELwZxViWe1dzG5TQakJ_i8ZOQuUYFJg02RcwUTzE3ty-x7mkwj9t2wAdRqTagyaDIAVMTxP_Y4AS76xjA3aH43Q0HKHGAxxIlXBIQxImuPhlUbPtVtTHIsUwkIx2BDh8kPZ3Mgr3Cyky0F-cHpEFSi3rPSSLD_FVHlJRW2cODVm8E-s98CURQYs1npzDztzZgZPnnb9K57CB2Z50Ve6qUV7z4-uHs3nehiMJHktIs7LQIDAQAB",
     PRIVATE_KEY_PEM: `-----BEGIN PRIVATE KEY-----
@@ -36,7 +33,7 @@ BjUoANFzgScOUTPCSQACXQ==
 };
 
 /**
- * CORE LOGIC
+ * INITIAL LOAD
  */
 async function loadPaymentForm(method) {
     if (!method) return;
@@ -46,14 +43,13 @@ async function loadPaymentForm(method) {
         container.innerHTML = await response.text();
         initFormFields(method);
 
-        // For FPX and E-Wallets, we must fetch the channel list
+        // Requirement: Channels must start with mkReq as well
         if (method === 'fpx' || method === 'ewallets') {
-            const mkReqUrl = document.getElementById('payment-form').dataset.mkreq;
-            const channelUrl = "https://devlinkv2.paydee.co/mpigw/channels";
-            await fetchChannels(mkReqUrl, channelUrl);
+            const form = document.getElementById('payment-form');
+            await fetchChannelsWithHandshake(form.dataset.mkreq, method);
         }
     } catch (err) {
-        container.innerHTML = "Error loading form.";
+        console.error("Form Load Error:", err);
     }
 }
 
@@ -71,39 +67,42 @@ function setFieldValue(name, value) {
 }
 
 /**
- * CHANNEL API WITH HANDSHAKE (mkReq -> Channels)
+ * CHANNEL FETCHING (mkReq -> channels)
  */
-async function fetchChannels(mkReqUrl, channelUrl) {
-    const trxnId = "CHNL" + Date.now();
-    
+async function fetchChannelsWithHandshake(mkReqUrl, method) {
+    const channelTrxnId = "CHNL" + Date.now();
+    const select = document.getElementsByName("MPI_PAYMENT_CHANNEL_ID")[0];
+
     try {
-        // 1. mkReq for the Channel fetch
+        // 1. Handshake for Channels
         const mkRes = await fetch(mkReqUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 "merchantId": CONFIG.MID,
                 "pubKey": CONFIG.PUBLICKEY,
-                "purchaseId": trxnId
+                "purchaseId": channelTrxnId
             })
         });
         const mkData = await mkRes.json();
         if (mkData.errorCode !== "000") throw new Error("Channel Handshake Failed");
 
-        // 2. The actual Channels request
-        const mac = CONFIG.MID + trxnId;
-        const response = await fetch(channelUrl, {
+        // 2. Fetch Channel List
+        const macString = CONFIG.MID + channelTrxnId;
+        const cnlRes = await fetch("https://devlinkv2.paydee.co/mpigw/channels", {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ "MPI_MERC_ID": CONFIG.MID, "MPI_TRXN_ID": trxnId, "MPI_MAC": mac })
+            body: JSON.stringify({
+                "MPI_MERC_ID": CONFIG.MID, 
+                "MPI_TRXN_ID": channelTrxnId, 
+                "MPI_MAC": macString 
+            })
         });
-        
-        const data = await response.json();
-        const select = document.getElementsByName("MPI_PAYMENT_CHANNEL_ID")[0];
-        
-        if (select && data.MPI_PAYMENT_CHANNEL) {
-            select.innerHTML = '<option value="">-- Choose Provider --</option>';
-            data.MPI_PAYMENT_CHANNEL.forEach(ch => {
+        const cnlData = await cnlRes.json();
+
+        if (cnlData.MPI_PAYMENT_CHANNEL) {
+            select.innerHTML = '<option value="">-- Select --</option>';
+            cnlData.MPI_PAYMENT_CHANNEL.forEach(ch => {
                 const opt = document.createElement("option");
                 opt.value = ch.MPI_CHANNEL_ID;
                 opt.innerText = ch.MPI_CHANNEL_NAME;
@@ -111,35 +110,39 @@ async function fetchChannels(mkReqUrl, channelUrl) {
                 select.appendChild(opt);
             });
         }
-    } catch(e) { console.error("Channels Error:", e); }
+    } catch (e) {
+        console.error("Channel Error:", e);
+        if(select) select.innerHTML = '<option value="">Error loading list</option>';
+    }
 }
 
 /**
- * PROCESS PAYMENT (mkReq -> mpReq)
+ * FINAL PAYMENT PROCESS (mkReq -> mpReq)
  */
 async function processPayment() {
     const form = document.getElementById("payment-form");
     const method = document.getElementById("method_selector").value;
     const amount = document.getElementById("display_amt").value;
     
-    if (!amount || !form) return alert("Missing amount or form.");
+    if (!amount || !form) return alert("Please fill in amount and select method.");
 
-    const cents = Math.round(parseFloat(amount) * 100);
-    setFieldValue("MPI_PURCH_AMT", cents);
+    // Convert to cents
+    setFieldValue("MPI_PURCH_AMT", Math.round(parseFloat(amount) * 100));
 
-    // mkReq Payload
+    // Prepare Payload
     const mkReqPayload = {
         "merchantId": CONFIG.MID,
         "pubKey": CONFIG.PUBLICKEY,
         "purchaseId": document.getElementsByName("MPI_TRXN_ID")[0].value
     };
 
-    // Requirement: add paymentMethod = DNQR for DuitNow QR mkReq
+    // Requirement: Add paymentMethod = DNQR for DuitNow QR
     if (method === 'duitnowqr') {
         mkReqPayload.paymentMethod = "DNQR";
     }
 
     try {
+        // 1. Final Handshake
         const res = await fetch(form.dataset.mkreq, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -148,7 +151,7 @@ async function processPayment() {
         const result = await res.json();
         if (result.errorCode !== "000") throw new Error(result.errorMessage);
 
-        // MAC Sequence Generation
+        // 2. Signature & Omission Logic
         const sequence = ["MPI_TRANS_TYPE", "MPI_MERC_ID", "MPI_PAN", "MPI_CARD_HOLDER_NAME", "MPI_PAN_EXP", "MPI_CVV2", "MPI_TRXN_ID", "MPI_ORI_TRXN_ID", "MPI_PURCH_DATE", "MPI_PURCH_CURR", "MPI_PURCH_AMT", "MPI_PAYMENT_CHANNEL_ID"];
         let macString = "";
         
@@ -157,21 +160,21 @@ async function processPayment() {
             if (el && el.value.trim() !== "") {
                 macString += el.value;
             } else if (el) {
-                el.disabled = true; // Omit empty/missing fields from the x-www-form-urlencoded POST
+                el.disabled = true; // Prevents sending empty fields in Form POST
             }
         });
 
+        // 3. Sign and Submit
         const signature = await signData(macString, CONFIG.PRIVATE_KEY_PEM);
-        
         const macField = document.getElementsByName("MPI_MAC")[0];
         macField.disabled = false;
         macField.value = signature;
 
         form.action = form.dataset.mpreq;
         form.method = "POST";
-        form.submit();
+        form.submit(); // Browser sends as x-www-form-urlencoded
     } catch (err) {
-        alert("Payment Failed: " + err.message);
+        alert("Payment Handshake Error: " + err.message);
     }
 }
 
