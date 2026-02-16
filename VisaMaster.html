@@ -1,0 +1,26 @@
+<form id="payment-form" data-mkreq="https://devlink.paydee.co/mpi/mkReq" data-mpreq="https://devlink.paydee.co/mpi/mpReq" method="POST">
+    <label>Transaction Type:</label>
+    <select name="MPI_TRANS_TYPE">
+        <option value="SALES">SALES</option>
+        <option value="INITRECURR">INITRECURR</option>
+        <option value="VSALES">VSALES</option>
+    </select>
+    <input type="hidden" name="MPI_MERC_ID">
+    <label>Card Number:</label>
+    <input type="text" name="MPI_PAN" maxlength="19">
+    <label>Expiry (YYMM):</label>
+    <input type="text" name="MPI_PAN_EXP" maxlength="4">
+    <label>CVV2:</label>
+    <input type="text" name="MPI_CVV2" maxlength="3">
+    <label>Cardholder Name:</label>
+    <input type="text" name="MPI_CARD_HOLDER_NAME" maxlength="45">
+    
+    <input type="hidden" name="MPI_TRXN_ID">
+    <input type="hidden" name="MPI_ORI_TRXN_ID">
+    <input type="hidden" name="MPI_PURCH_DATE">
+    <input type="hidden" name="MPI_PURCH_CURR" value="458">
+    <input type="hidden" name="MPI_PURCH_AMT">
+    <input type="hidden" name="MPI_RETURN_URL">
+    <label>Signature:</label>
+    <textarea name="MPI_MAC" readonly></textarea>
+</form>
