@@ -90,7 +90,7 @@ async function fetchChannelsWithHandshake(mkReqUrl, method) {
         // 2. Fetch Channel List
         const macString = CONFIG.MID + channelTrxnId;
         const cnlRes = await fetch("https://devlinkv2.paydee.co/mpigw/channels", {
-            method: 'POST',
+            method: 'GET',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 "MPI_MERC_ID": CONFIG.MID, 
