@@ -32,9 +32,7 @@ BjUoANFzgScOUTPCSQACXQ==
     VERCEL_CALLBACK_URL: "https://sys-int-nine.vercel.app/api/callback"
 };
 
-/**
- * INITIAL LOAD
- */
+/** 1. LOAD FORM TEMPLATE **/
 async function loadPaymentForm(method) {
     if (!method) return;
     const container = document.getElementById('dynamic-form-container');
@@ -43,13 +41,13 @@ async function loadPaymentForm(method) {
         container.innerHTML = await response.text();
         initFormFields(method);
 
-        // Requirement: Channels must start with mkReq as well
         if (method === 'fpx' || method === 'ewallets') {
             const form = document.getElementById('payment-form');
-            await fetchChannelsWithHandshake(form.dataset.mkreq, method);
+            // We pass the mkReq URL defined in the form's data-attribute
+            await fetchChannelsWithHandshake(form.dataset.mkreq);
         }
     } catch (err) {
-        console.error("Form Load Error:", err);
+        console.error("Template Load Error:", err);
     }
 }
 
@@ -66,17 +64,15 @@ function setFieldValue(name, value) {
     if (el) el.value = value;
 }
 
-/**
- * CHANNEL FETCHING (mkReq -> channels)
- */
-async function fetchChannelsWithHandshake(mkReqUrl, method) {
+/** 2. CHANNELS HANDSHAKE (The Fixed Function) **/
+async function fetchChannelsWithHandshake(mkReqUrl) {
     const channelTrxnId = "CHNL" + Date.now();
     const select = document.getElementsByName("MPI_PAYMENT_CHANNEL_ID")[0];
 
     try {
-        // 1. Handshake for Channels
+        // --- FIXED: Added method: 'POST' ---
         const mkRes = await fetch(mkReqUrl, {
-            method: 'POST',
+            method: 'POST', 
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 "merchantId": CONFIG.MID,
@@ -85,12 +81,12 @@ async function fetchChannelsWithHandshake(mkReqUrl, method) {
             })
         });
         const mkData = await mkRes.json();
-        if (mkData.errorCode !== "000") throw new Error("Channel Handshake Failed");
+        if (mkData.errorCode !== "000") throw new Error("Channel mkReq Failed");
 
-        // 2. Fetch Channel List
+        // 2. Fetch actual channel list
         const macString = CONFIG.MID + channelTrxnId;
         const cnlRes = await fetch("https://devlinkv2.paydee.co/mpigw/channels", {
-            method: 'GET',
+            method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 "MPI_MERC_ID": CONFIG.MID, 
@@ -101,7 +97,7 @@ async function fetchChannelsWithHandshake(mkReqUrl, method) {
         const cnlData = await cnlRes.json();
 
         if (cnlData.MPI_PAYMENT_CHANNEL) {
-            select.innerHTML = '<option value="">-- Select --</option>';
+            select.innerHTML = '<option value="">-- Choose Provider --</option>';
             cnlData.MPI_PAYMENT_CHANNEL.forEach(ch => {
                 const opt = document.createElement("option");
                 opt.value = ch.MPI_CHANNEL_ID;
@@ -112,37 +108,31 @@ async function fetchChannelsWithHandshake(mkReqUrl, method) {
         }
     } catch (e) {
         console.error("Channel Error:", e);
-        if(select) select.innerHTML = '<option value="">Error loading list</option>';
+        if(select) select.innerHTML = '<option value="">Error loading providers</option>';
     }
 }
 
-/**
- * FINAL PAYMENT PROCESS (mkReq -> mpReq)
- */
+/** 3. FINAL PAYMENT PROCESS **/
 async function processPayment() {
     const form = document.getElementById("payment-form");
     const method = document.getElementById("method_selector").value;
     const amount = document.getElementById("display_amt").value;
     
-    if (!amount || !form) return alert("Please fill in amount and select method.");
+    if (!amount || !form) return alert("Please enter amount and select method.");
 
-    // Convert to cents
     setFieldValue("MPI_PURCH_AMT", Math.round(parseFloat(amount) * 100));
 
-    // Prepare Payload
     const mkReqPayload = {
         "merchantId": CONFIG.MID,
         "pubKey": CONFIG.PUBLICKEY,
         "purchaseId": document.getElementsByName("MPI_TRXN_ID")[0].value
     };
 
-    // Requirement: Add paymentMethod = DNQR for DuitNow QR
     if (method === 'duitnowqr') {
         mkReqPayload.paymentMethod = "DNQR";
     }
 
     try {
-        // 1. Final Handshake
         const res = await fetch(form.dataset.mkreq, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -151,7 +141,6 @@ async function processPayment() {
         const result = await res.json();
         if (result.errorCode !== "000") throw new Error(result.errorMessage);
 
-        // 2. Signature & Omission Logic
         const sequence = ["MPI_TRANS_TYPE", "MPI_MERC_ID", "MPI_PAN", "MPI_CARD_HOLDER_NAME", "MPI_PAN_EXP", "MPI_CVV2", "MPI_TRXN_ID", "MPI_ORI_TRXN_ID", "MPI_PURCH_DATE", "MPI_PURCH_CURR", "MPI_PURCH_AMT", "MPI_PAYMENT_CHANNEL_ID"];
         let macString = "";
         
@@ -160,11 +149,10 @@ async function processPayment() {
             if (el && el.value.trim() !== "") {
                 macString += el.value;
             } else if (el) {
-                el.disabled = true; // Prevents sending empty fields in Form POST
+                el.disabled = true; 
             }
         });
 
-        // 3. Sign and Submit
         const signature = await signData(macString, CONFIG.PRIVATE_KEY_PEM);
         const macField = document.getElementsByName("MPI_MAC")[0];
         macField.disabled = false;
@@ -172,9 +160,9 @@ async function processPayment() {
 
         form.action = form.dataset.mpreq;
         form.method = "POST";
-        form.submit(); // Browser sends as x-www-form-urlencoded
+        form.submit();
     } catch (err) {
-        alert("Payment Handshake Error: " + err.message);
+        alert("Payment Handshake Failed: " + err.message);
     }
 }
 
