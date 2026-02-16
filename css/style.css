@@ -190,3 +190,24 @@ input[type="number"], select {
     height: 150px;
     margin-bottom: 15px;
 }
+
+html, body {
+    height: 100%;
+    margin: 0;
+}
+
+.checkout-wrapper {
+    display: flex;
+    justify-content: center; /* Horizontal */
+    align-items: center;     /* Vertical */
+    min-height: 100vh;
+    background-color: #f4f7f9;
+}
+
+.controls-container {
+    background: #fff;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.1);
+    width: 400px;
+}
