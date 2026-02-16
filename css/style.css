@@ -1,213 +1,68 @@
-/* --- Root Variables for easy customization --- */
-:root {
-    --primary-blue: #1a73e8;
-    --primary-hover: #1557b0;
-    --bg-light: #f8f9fa;
-    --border-color: #dadce0;
-    --text-main: #3c4043;
-    --card-bg: #1e1e1e;
-    --white: #ffffff;
-}
-
-/* --- Base Layout --- */
+/* Full page layout */
 html, body {
     height: 100%;
     margin: 0;
-    font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-    background-color: var(--bg-light);
-    color: var(--text-main);
+    font-family: 'Segoe UI', sans-serif;
+    background-color: #f0f2f5;
 }
 
-body {
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh;
-}
-
-/* --- Header Styling --- */
-.top-header {
-    background-color: var(--primary-blue);
-    color: var(--white);
-    padding: 1rem 2rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.top-header h1 {
-    margin: 0;
-    font-size: 1.25rem;
-    font-weight: 500;
-}
-
-.btn-back {
-    background-color: var(--white);
-    color: var(--primary-blue);
-    text-decoration: none;
-    padding: 6px 16px;
-    border-radius: 4px;
-    font-weight: 600;
-    font-size: 0.85rem;
-    transition: all 0.2s ease;
-}
-
-.btn-back:hover {
-    background-color: #f1f3f4;
-    transform: translateY(-1px);
-}
-
-/* --- Centered Form Container (Checkout Page) --- */
+/* Centering wrapper */
 .checkout-wrapper {
-    flex: 1;
     display: flex;
-    align-items: center;
     justify-content: center;
-    padding: 40px 20px;
+    align-items: center;
+    min-height: 100vh;
+    padding: 20px;
 }
 
+/* Form card styling */
 .controls-container {
-    background-color: var(--white);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    width: 420px;
-    padding: 24px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+    background: #ffffff;
+    width: 100%;
+    max-width: 420px;
+    padding: 40px;
+    border-radius: 16px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.08);
 }
 
 .controls-container h2 {
-    margin-top: 0;
-    font-size: 1.5rem;
     text-align: center;
-    color: var(--text-main);
+    margin-bottom: 25px;
+    color: #1a73e8;
 }
 
-/* --- Form Elements --- */
 .section {
-    margin-bottom: 20px;
+    margin-bottom: 15px;
 }
 
 .section label {
     display: block;
-    margin-bottom: 8px;
-    font-size: 0.9rem;
+    margin-bottom: 5px;
     font-weight: 500;
+    color: #555;
 }
 
 input[type="number"], select {
     width: 100%;
-    padding: 10px;
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
     font-size: 1rem;
-    box-sizing: border-box;
 }
 
 #pay-btn {
     width: 100%;
-    padding: 14px;
-    background-color: var(--primary-blue);
-    color: var(--white);
+    padding: 15px;
+    margin-top: 20px;
+    background-color: #1a73e8;
+    color: white;
     border: none;
-    border-radius: 4px;
-    font-size: 1rem;
+    border-radius: 8px;
+    font-size: 1.1rem;
     font-weight: 600;
     cursor: pointer;
-    transition: background 0.2s;
 }
 
 #pay-btn:hover {
-    background-color: var(--primary-hover);
-}
-
-/* --- Credit Card Visual Styling --- */
-.credit-card-container {
-    position: relative;
-    width: 100%;
-    height: 220px;
-    background-color: var(--card-bg);
-    border-radius: 12px;
-    margin-bottom: 24px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-    overflow: hidden;
-}
-
-/* IC Chip */
-.credit-card-container::after {
-    content: '';
-    position: absolute;
-    top: 35%;
-    left: 8%;
-    width: 45px;
-    height: 35px;
-    background: linear-gradient(135deg, #ffd700 0%, #b8860b 100%);
-    border-radius: 6px;
-}
-
-.credit-card-container input {
-    position: absolute;
-    background: transparent;
-    color: var(--white);
-    border: 1px solid transparent;
-    font-family: 'Courier New', Courier, monospace;
-    font-size: 1rem;
-    transition: border 0.2s;
-}
-
-.credit-card-container input:focus {
-    border: 1px solid rgba(255,255,255,0.3);
-    outline: none;
-}
-
-.card-number-input { top: 60%; left: 8%; width: 84%; font-size: 1.4rem !important; }
-.name-input { bottom: 12%; left: 8%; width: 50%; font-size: 0.75rem !important; text-transform: uppercase; }
-.expiry-input { bottom: 12%; right: 8%; width: 20%; font-size: 0.75rem !important; text-align: right; }
-
-/* --- Two-Panel Layout (Start Page) --- */
-.container {
-    display: flex;
-    flex: 1;
-    gap: 20px;
-    padding: 20px;
-}
-
-.left-panel, .right-panel {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    height: calc(100vh - 120px);
-}
-
-#left-container, .right-panel embed, .right-panel object {
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    background: var(--white);
-    width: 100%;
-    height: 100%;
-}
-
-.right-panel embed {
-    height: 150px;
-    margin-bottom: 15px;
-}
-
-html, body {
-    height: 100%;
-    margin: 0;
-}
-
-.checkout-wrapper {
-    display: flex;
-    justify-content: center; /* Horizontal */
-    align-items: center;     /* Vertical */
-    min-height: 100vh;
-    background-color: #f4f7f9;
-}
-
-.controls-container {
-    background: #fff;
-    padding: 30px;
-    border-radius: 12px;
-    box-shadow: 0 8px 30px rgba(0,0,0,0.1);
-    width: 400px;
+    background-color: #1557b0;
 }
