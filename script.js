@@ -36,40 +36,29 @@ BjUoANFzgScOUTPCSQACXQ==
 };
 
 /**
- * FORM LOADING LOGIC
+ * CORE LOGIC
  */
 async function loadPaymentForm(method) {
-    if (!method) {
-        document.getElementById('dynamic-form-container').innerHTML = "";
-        return;
-    }
+    if (!method) return;
     const container = document.getElementById('dynamic-form-container');
     try {
         const response = await fetch(`${method}.html`);
-        if (!response.ok) throw new Error("Template not found");
         container.innerHTML = await response.text();
-        
-        // Setup base fields (Date, MID, TRXN ID)
         initFormFields(method);
 
-        // Fetch banks/wallets if applicable
+        // For FPX and E-Wallets, we must fetch the channel list
         if (method === 'fpx' || method === 'ewallets') {
-            await fetchChannels(method);
+            const mkReqUrl = document.getElementById('payment-form').dataset.mkreq;
+            const channelUrl = "https://devlinkv2.paydee.co/mpigw/channels";
+            await fetchChannels(mkReqUrl, channelUrl);
         }
     } catch (err) {
-        container.innerHTML = `<p style="color:red">Error: ${err.message}</p>`;
+        container.innerHTML = "Error loading form.";
     }
 }
 
 function initFormFields(method) {
-    const d = new Date();
-    const ts = d.getFullYear() + 
-               (d.getMonth() + 1).toString().padStart(2, '0') + 
-               d.getDate().toString().padStart(2, '0') + 
-               d.getHours().toString().padStart(2, '0') + 
-               d.getMinutes().toString().padStart(2, '0') + 
-               d.getSeconds().toString().padStart(2, '0');
-    
+    const ts = new Date().toISOString().replace(/[-T:.Z]/g, '').slice(0, 14);
     setFieldValue("MPI_PURCH_DATE", ts);
     setFieldValue("MPI_TRXN_ID", (method === 'duitnowqr' ? "DNQR" : "PAY") + ts);
     setFieldValue("MPI_MERC_ID", CONFIG.MID);
@@ -82,138 +71,116 @@ function setFieldValue(name, value) {
 }
 
 /**
- * CHANNEL API (JSON)
+ * CHANNEL API WITH HANDSHAKE (mkReq -> Channels)
  */
-async function fetchChannels(method) {
-    const trxnId = "GETCNL" + Date.now();
-    const mac = CONFIG.MID + trxnId;
+async function fetchChannels(mkReqUrl, channelUrl) {
+    const trxnId = "CHNL" + Date.now();
+    
     try {
-        const response = await fetch("https://devlinkv2.paydee.co/mpigw/channels", {
+        // 1. mkReq for the Channel fetch
+        const mkRes = await fetch(mkReqUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                "merchantId": CONFIG.MID,
+                "pubKey": CONFIG.PUBLICKEY,
+                "purchaseId": trxnId
+            })
+        });
+        const mkData = await mkRes.json();
+        if (mkData.errorCode !== "000") throw new Error("Channel Handshake Failed");
+
+        // 2. The actual Channels request
+        const mac = CONFIG.MID + trxnId;
+        const response = await fetch(channelUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ "MPI_MERC_ID": CONFIG.MID, "MPI_TRXN_ID": trxnId, "MPI_MAC": mac })
         });
+        
         const data = await response.json();
         const select = document.getElementsByName("MPI_PAYMENT_CHANNEL_ID")[0];
         
         if (select && data.MPI_PAYMENT_CHANNEL) {
-            // Filter by method if the API returns mixed results
-            const filtered = data.MPI_PAYMENT_CHANNEL.filter(ch => 
-                method === 'fpx' ? ch.MPI_CHANNEL_ID.length > 5 : ch.MPI_CHANNEL_ID.length <= 10
-            );
-
+            select.innerHTML = '<option value="">-- Choose Provider --</option>';
             data.MPI_PAYMENT_CHANNEL.forEach(ch => {
                 const opt = document.createElement("option");
                 opt.value = ch.MPI_CHANNEL_ID;
                 opt.innerText = ch.MPI_CHANNEL_NAME;
-                if (ch.MPI_CHANNEL_STATUS !== 'A') {
-                    opt.disabled = true;
-                    opt.style.color = "gray";
-                }
+                if (ch.MPI_CHANNEL_STATUS !== 'A') opt.disabled = true;
                 select.appendChild(opt);
             });
         }
-    } catch(e) { console.error("Channel Load Failed", e); }
+    } catch(e) { console.error("Channels Error:", e); }
 }
 
 /**
- * MAIN PAYMENT PROCESS
+ * PROCESS PAYMENT (mkReq -> mpReq)
  */
 async function processPayment() {
     const form = document.getElementById("payment-form");
     const method = document.getElementById("method_selector").value;
     const amount = document.getElementById("display_amt").value;
-    const payBtn = document.getElementById("pay-btn");
+    
+    if (!amount || !form) return alert("Missing amount or form.");
 
-    if (!amount || amount <= 0) return alert("Please enter a valid amount.");
-    if (!form) return alert("Please select a payment method.");
-
-    // Convert to cents
     const cents = Math.round(parseFloat(amount) * 100);
     setFieldValue("MPI_PURCH_AMT", cents);
 
-    payBtn.disabled = true;
-    payBtn.innerText = "Processing...";
-
-    // 1. mkReq (JSON)
+    // mkReq Payload
     const mkReqPayload = {
         "merchantId": CONFIG.MID,
         "pubKey": CONFIG.PUBLICKEY,
         "purchaseId": document.getElementsByName("MPI_TRXN_ID")[0].value
     };
 
+    // Requirement: add paymentMethod = DNQR for DuitNow QR mkReq
     if (method === 'duitnowqr') {
         mkReqPayload.paymentMethod = "DNQR";
     }
 
     try {
-        const mkRes = await fetch(form.dataset.mkreq, {
+        const res = await fetch(form.dataset.mkreq, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(mkReqPayload)
         });
-        const mkResult = await mkRes.json();
-        
-        if (mkResult.errorCode !== "000") throw new Error(mkResult.errorMessage);
+        const result = await res.json();
+        if (result.errorCode !== "000") throw new Error(result.errorMessage);
 
-        // 2. Build MAC Sequence & Handle Omissions
-        const sequence = [
-            "MPI_TRANS_TYPE", "MPI_MERC_ID", "MPI_PAN", "MPI_CARD_HOLDER_NAME", 
-            "MPI_PAN_EXP", "MPI_CVV2", "MPI_TRXN_ID", "MPI_ORI_TRXN_ID", 
-            "MPI_PURCH_DATE", "MPI_PURCH_CURR", "MPI_PURCH_AMT", "MPI_PAYMENT_CHANNEL_ID"
-        ];
-        
+        // MAC Sequence Generation
+        const sequence = ["MPI_TRANS_TYPE", "MPI_MERC_ID", "MPI_PAN", "MPI_CARD_HOLDER_NAME", "MPI_PAN_EXP", "MPI_CVV2", "MPI_TRXN_ID", "MPI_ORI_TRXN_ID", "MPI_PURCH_DATE", "MPI_PURCH_CURR", "MPI_PURCH_AMT", "MPI_PAYMENT_CHANNEL_ID"];
         let macString = "";
+        
         sequence.forEach(name => {
             const el = document.getElementsByName(name)[0];
             if (el && el.value.trim() !== "") {
                 macString += el.value;
             } else if (el) {
-                // Remove empty fields from form POST to ensure clean redirection
-                el.disabled = true; 
+                el.disabled = true; // Omit empty/missing fields from the x-www-form-urlencoded POST
             }
         });
 
-        // 3. Sign Data (RSA SHA-256)
         const signature = await signData(macString, CONFIG.PRIVATE_KEY_PEM);
         
-        // Prepare MAC field for submission
         const macField = document.getElementsByName("MPI_MAC")[0];
         macField.disabled = false;
         macField.value = signature;
 
-        // 4. mpReq (Redirection via POST Form)
         form.action = form.dataset.mpreq;
         form.method = "POST";
         form.submit();
-
     } catch (err) {
-        alert("Error: " + err.message);
-        payBtn.disabled = false;
-        payBtn.innerText = "Pay Now";
-        // Re-enable disabled fields so user can fix and retry
-        form.querySelectorAll('input, select').forEach(i => i.disabled = false);
+        alert("Payment Failed: " + err.message);
     }
 }
 
-/**
- * CRYPTO ALGORITHM
- */
 async function signData(message, pem) {
     const encoder = new TextEncoder();
     const data = encoder.encode(message);
     const b64 = pem.replace(/-----BEGIN PRIVATE KEY-----|-----END PRIVATE KEY-----|\n|\r/g, '');
     const binaryKey = Uint8Array.from(atob(b64), c => c.charCodeAt(0)).buffer;
-
-    const privateKey = await window.crypto.subtle.importKey(
-        "pkcs8", binaryKey,
-        { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
-        false, ["sign"]
-    );
-
+    const privateKey = await window.crypto.subtle.importKey("pkcs8", binaryKey, { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["sign"]);
     const signature = await window.crypto.subtle.sign("RSASSA-PKCS1-v1_5", privateKey, data);
-    
-    // Base64URL encoding (No padding, replace + and /)
-    return btoa(String.fromCharCode(...new Uint8Array(signature)))
-        .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    return btoa(String.fromCharCode(...new Uint8Array(signature))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
