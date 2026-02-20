@@ -1,11 +1,19 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>My Webpage</title>
+    <meta charset="UTF-8">
+    <title>Payment Page</title>
 </head>
 <body>
-    <h1>Hello World</h1>
-    
+    <input type="hidden" id="MPI_MERC_ID" value="000000000000006">
+    <input type="text" id="MPI_PURCH_DATE">
+    <input type="text" id="MPI_TRXN_ID">
+
+    <div id="status-msg">Connecting to secure server...</div>
+    <div id="payment-container" style="display:none;">
+        <h2>Payment Ready</h2>
+    </div>
+
     <script src="script.js"></script>
 </body>
 </html>
