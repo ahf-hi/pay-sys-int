@@ -1,4 +1,3 @@
-    <script>
         // --- CONFIGURATION ---
         const KEY_EXCHANGE_URL = "https://devlinkv2.paydee.co/mpigw/mkReq";
         const PAYMENT_REQUEST_URL = "https://devlinkv2.paydee.co/mpigw/mpReq";
@@ -174,5 +173,3 @@ BjUoANFzgScOUTPCSQACXQ==
 
         // Run on load
         initFields();
-
-    </script>
