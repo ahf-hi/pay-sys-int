@@ -102,24 +102,76 @@ async function mkReq() {
     }
 }
 
-/**
- * 3. HANDLE PAY BUTTON
- * This bridges your "Pay Now" button to the submission logic
- */
-function handlePay() {
-    const displayAmt = document.getElementById("display_amt").value;
-    if (!displayAmt) {
-        alert("Please enter an amount");
-        return;
-    }
-    
-    // Format amount: e.g., 1.50 becomes 1.50 (or 150 if your gateway wants cents)
-    // Most gateways want clean strings without symbols
-    document.getElementById("MPI_PURCH_AMT").value = displayAmt;
-    
-    // Call the actual submission
-    mpReq();
-}
+         * 3. HANDLE PAY: Amount conversion -> Signing -> Submit
+         */
+        async function handlePay() {
+            const displayAmt = document.getElementById("display_amt").value;
+            if (!displayAmt || displayAmt <= 0) {
+                alert("Please enter a valid amount");
+                return;
+            }
+
+            const payBtn = document.getElementById("pay-btn");
+
+            // Convert 1.50 to 150 (multiply by 100)
+            const gatewayAmt = Math.round(parseFloat(displayAmt) * 100);
+            document.getElementById("MPI_PURCH_AMT").value = gatewayAmt;
+
+            // Generate the string to be signed (Clear MAC)
+            const rawData = 
+                document.getElementById("MPI_TRANS_TYPE").value + 
+                document.getElementById("MPI_MERC_ID").value + 
+                document.getElementById("MPI_TRXN_ID").value +
+                document.getElementById("MPI_PURCH_DATE").value +
+                document.getElementById("MPI_PURCH_CURR").value +
+                document.getElementById("MPI_PURCH_AMT").value;
+
+            try {
+                // Update button text as requested
+                payBtn.innerText = "Select Payment Method";
+                payBtn.disabled = true;
+
+                // Sign the data
+                const signature = await signData(rawData, PRIVATE_KEY_PEM);
+                document.getElementById("MPI_MAC").value = signature;
+
+                // Submit to Gateway
+                mpReq();
+            } catch (err) {
+                console.error(err);
+                alert("Signing Error: Check console for details.");
+                payBtn.innerText = "Pay Now";
+                payBtn.disabled = false;
+            }
+        }
+
+        /**
+         * 4. CRYPTO: RSA Signing (SHA256withRSA + Base64URL)
+         */
+        async function signData(message, pem) {
+            const encoder = new TextEncoder();
+            const data = encoder.encode(message);
+
+            const binaryKey = pemToArrayBuffer(pem);
+            const privateKey = await window.crypto.subtle.importKey(
+                "pkcs8",
+                binaryKey,
+                { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+                false,
+                ["sign"]
+            );
+
+            const signature = await window.crypto.subtle.sign("RSASSA-PKCS1-v1_5", privateKey, data);
+
+            return btoa(String.fromCharCode(...new Uint8Array(signature)))
+                .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+        }
+
+        function pemToArrayBuffer(pem) {
+            const b64 = pem.replace(/-----BEGIN PRIVATE KEY-----|-----END PRIVATE KEY-----|\n|\r/g, '');
+            return Uint8Array.from(atob(b64), c => c.charCodeAt(0)).buffer;
+        }
+
 
 /**
  * 4. MP REQ - Main Payment Submission
