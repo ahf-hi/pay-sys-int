@@ -1,12 +1,13 @@
-// --- CONFIGURATION ---
-const KEY_EXCHANGE_URL = "https://devlinkv2.paydee.co/mpigw/mkReq";
-const PAYMENT_REQUEST_URL = "https://devlinkv2.paydee.co/mpigw/mpReq";
-const GET_CHANNEL_URL = "https://devlinkv2.paydee.co/mpigw/channels";
-const PUBLICKEY = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAq8j2SHHfzMLlhYppnlk-QqjjjZwMkhK6s6rERd0JhhY_6-Md4Z0327uEdfNbJrSEPJVPT55gjRhx4MorEhrabuafuY8thSPS4epwkOjjPtELwZxViWe1dzG5TQakJ_i8ZOQuUYFJg02RcwUTzE3ty-x7mkwj9t2wAdRqTagyaDIAVMTxP_Y4AS76xjA3aH43Q0HKHGAxxIlXBIQxImuPhlUbPtVtTHIsUwkIx2BDh8kPZ3Mgr3Cyky0F-cHpEFSi3rPSSLD_FVHlJRW2cODVm8E-s98CURQYs1npzDztzZgZPnnb9K57CB2Z50Ve6qUV7z4-uHs3nehiMJHktIs7LQIDAQAB";
-const VERCEL_CALLBACK_URL = "https://sys-int-nine.vercel.app/api/callback";
+        // --- CONFIGURATION ---
+        const KEY_EXCHANGE_URL = "https://devlinkv2.paydee.co/mpigw/mkReq";
+        const PAYMENT_REQUEST_URL = "https://devlinkv2.paydee.co/mpigw/mercReq";
+        const GET_CHANNEL_URL = "https://devlinkv2.paydee.co/mpigw/channels";
+        const PUBLICKEY = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAq8j2SHHfzMLlhYppnlk-QqjjjZwMkhK6s6rERd0JhhY_6-Md4Z0327uEdfNbJrSEPJVPT55gjRhx4MorEhrabuafuY8thSPS4epwkOjjPtELwZxViWe1dzG5TQakJ_i8ZOQuUYFJg02RcwUTzE3ty-x7mkwj9t2wAdRqTagyaDIAVMTxP_Y4AS76xjA3aH43Q0HKHGAxxIlXBIQxImuPhlUbPtVtTHIsUwkIx2BDh8kPZ3Mgr3Cyky0F-cHpEFSi3rPSSLD_FVHlJRW2cODVm8E-s98CURQYs1npzDztzZgZPnnb9K57CB2Z50Ve6qUV7z4-uHs3nehiMJHktIs7LQIDAQAB";
+		const VERCEL_CALLBACK_URL = "https://sys-int-nine.vercel.app/api/callback"
 
-// PASTE YOUR PRIVATE KEY HERE (PKCS#8 format)
-const PRIVATE_KEY_PEM = `-----BEGIN PRIVATE KEY-----
+        
+        // PASTE YOUR PRIVATE KEY HERE (PKCS#8 format)
+        const PRIVATE_KEY_PEM = `-----BEGIN PRIVATE KEY-----
 MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCryPZIcd/MwuWF
 immeWT5CqOONnAySErqzqsRF3QmGFj/r4x3hnTfbu4R181smtIQ8lU9PnmCNGHHg
 yisSGtpu5p+5jy2FI9Lh6nCQ6OM+0QvBnFWJZ7V3MblNBqQn+Lxk5C5RgUmDTZFz
@@ -35,73 +36,66 @@ SL+FRlqBUM8bvGHdPzXV8CLr5NlItcINVHiCO70UmTCNx7b0Ga3vFsVhG8h9VQZu
 BjUoANFzgScOUTPCSQACXQ==
 -----END PRIVATE KEY-----`;
 
-/**
- * 1. RUN ON LOAD
- */
-window.onload = async function() {
-    console.log("Page loaded. Initializing...");
-    initFields();
-    
-    // Set form action
-    const form = document.getElementById("form");
-    if (form) {
-        form.action = PAYMENT_REQUEST_URL;
-    }
-
-    // Call key exchange automatically
-    await mkReq();
-};
-
-function initFields() {
-    let d = new Date();
-    let x = d.getFullYear() + 
-            (d.getMonth() + 1).toString().padStart(2, '0') + 
-            d.getDate().toString().padStart(2, '0') + 
-            d.getHours().toString().padStart(2, '0') + 
-            d.getMinutes().toString().padStart(2, '0') + 
-            d.getSeconds().toString().padStart(2, '0');
-    
-    // Check if form exists before setting values
-    if (document.forms["form"]) {
-        document.forms["form"]["MPI_PURCH_DATE"].value = x;
-        document.forms["form"]["MPI_TRXN_ID"].value = "PAGUAT" + x;
-    }
-}
 
 /**
- * 2. KEY EXCHANGE (mkReq)
- */
-async function mkReq() {
-    let MID = document.getElementById("MPI_MERC_ID").value;
-    let transactionID = document.getElementById("MPI_TRXN_ID").value;
+         * 1. RUN ON LOAD: Initialize and call mkReq
+         */
+        window.onload = async function() {
+            initFields();
+            await mkReq();
+        };
 
-    try {
-        const response = await fetch(KEY_EXCHANGE_URL, {
-            method: 'POST',
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                "merchantId": MID,
-                "pubKey": PUBLICKEY,
-                "purchaseId": transactionID
-            })
-        });
-        const result = await response.json(); 
-
-        if (result.errorCode === "000") {
-            // Success: Hide status and show UI
-            document.getElementById("status-msg").style.display = "none";
-            // In your HTML you have #main-ui, let's make sure it shows
-            document.getElementById("main-ui").style.display = "block";
-        } else {
-            document.getElementById("status-msg").innerText = "❌ Failed. Please refresh.";
-            alert(`Error: ${result.errorMessage}`);
+        function initFields() {
+            let d = new Date();
+            let x = d.getFullYear() + 
+                    (d.getMonth() + 1).toString().padStart(2, '0') + 
+                    d.getDate().toString().padStart(2, '0') + 
+                    d.getHours().toString().padStart(2, '0') + 
+                    d.getMinutes().toString().padStart(2, '0') + 
+                    d.getSeconds().toString().padStart(2, '0');
+            
+            document.getElementById("MPI_PURCH_DATE").value = x;
+            document.getElementById("MPI_TRXN_ID").value = "SYSINT" + x;
         }
-    } catch (error) {
-        document.getElementById("status-msg").innerText = "⚠️ Connection Error";
-        console.error("Key Exchange Error:", error);
-    }
-}
 
+        /**
+         * 2. KEY EXCHANGE (mkReq)
+         */
+        async function mkReq() {
+            let MID = document.getElementById("MPI_MERC_ID").value;
+            let transactionID = document.getElementById("MPI_TRXN_ID").value;
+
+            try {
+                const response = await fetch(KEY_EXCHANGE_URL, {
+                    method: 'POST',
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        "merchantId": MID,
+                        "pubKey": PUBLICKEY,
+                        "purchaseId": transactionID
+                    })
+                });
+                const result = await response.json(); 
+
+                if (result.errorCode === "000") {
+                    // Success: Show the payment UI silently (no alert)
+                    document.getElementById("status-msg").style.display = "none";
+                    document.getElementById("payment-container").style.display = "block";
+                    // Also ensure checkout-box is visible if you are using that ID
+                    if(document.getElementById("checkout-box")) {
+                        document.getElementById("checkout-box").style.display = "block";
+                    }
+                } else {
+                    document.getElementById("status-msg").innerText = "❌ Failed. Please refresh.";
+                    alert(`Error: ${result.errorMessage}`);
+                }
+            } catch (error) {
+                document.getElementById("status-msg").innerText = "⚠️ Connection Error";
+                console.error(error);
+            }
+        }
+
+        /**
          * 3. HANDLE PAY: Amount conversion -> Signing -> Submit
          */
         async function handlePay() {
@@ -172,35 +166,24 @@ async function mkReq() {
             return Uint8Array.from(atob(b64), c => c.charCodeAt(0)).buffer;
         }
 
+        /**
+         * 5. MP REQ: Final Submission
+         */
+        function mpReq() {
+            const myForm = document.getElementById("form");
+            const iframe = document.getElementById("payment-frame");
+            const checkoutBox = document.getElementById("checkout-box") || document.getElementById("payment-container");
 
-/**
- * 4. MP REQ - Main Payment Submission
- */
-function mpReq() {
-    const form = document.getElementById("form");
-    const payButton = document.getElementById("pay-btn");
+            // 1. Set the destination URL
+            myForm.action = PAYMENT_REQUEST_URL;
+            
+            // 2. Set the return URL
+            document.getElementById("MPI_RETURN_URL").value = VERCEL_CALLBACK_URL;
 
-    // 1. Set the Return URL
-    document.getElementById("MPI_RETURN_URL").value = VERCEL_CALLBACK_URL;
+            // 3. UI Transition: Hide the input box and show the gateway iframe
+            if (checkoutBox) checkoutBox.style.display = "none";
+            if (iframe) iframe.style.display = "block";
 
-    // 2. Disable empty fields for correct MAC calculation if necessary
-    const inputs = form.querySelectorAll('input, select, textarea');
-    inputs.forEach(input => {
-        if (!input.value.trim()) {
-            input.disabled = true;
+            // 4. Submit the signed data into the iframe
+            myForm.submit();
         }
-    });
-
-    payButton.disabled = true;
-    payButton.innerText = "Redirecting to Gateway...";
-
-    // 3. Submit form normally
-    form.submit();
-
-    // 4. Re-enable after delay
-    setTimeout(() => {
-        inputs.forEach(input => input.disabled = false);
-        payButton.disabled = false;
-        payButton.innerText = "Pay Now";
-    }, 2000);
-}
