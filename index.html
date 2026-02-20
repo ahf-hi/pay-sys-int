@@ -2,18 +2,42 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="css/form.css">
     <title>Payment Page</title>
+    <style>
+        /* Hide everything by default until mkReq succeeds */
+        #payment-container { display: none; margin-top: 20px; }
+        .hidden-fields { display: none; }
+        .loading-overlay { margin: 20px; font-weight: bold; color: #555; }
+    </style>
 </head>
-<body>
-    <input type="hidden" id="MPI_MERC_ID" value="000000000000006">
-    <input type="text" id="MPI_PURCH_DATE">
-    <input type="text" id="MPI_TRXN_ID">
+<body> 
+    <div id="status-msg" class="loading-overlay">Initializing secure connection...</div>
 
-    <div id="status-msg">Connecting to secure server...</div>
-    <div id="payment-container" style="display:none;">
-        <h2>Payment Ready</h2>
-    </div>
+<div class="controls-container controls" id="main-ui">
+    <h3>Secure Payment</h3>
+    
+    <form id="form" method="post" target="payment-frame">
+        <div style="display:none;">
+            <input type="hidden" name="MPI_RETURN_URL" id="MPI_RETURN_URL">
+            <input type="text" name="MPI_TRANS_TYPE" id="MPI_TRANS_TYPE"  value="SALES">
+            <input type="text" name="MPI_MERC_ID" id="MPI_MERC_ID" value="000000000000006">
+            <input type="text" name="MPI_PURCH_DATE" id="MPI_PURCH_DATE">
+            <input type="text" name="MPI_TRXN_ID" id="MPI_TRXN_ID">
+            <input type="text" name="MPI_PURCH_CURR" id="MPI_PURCH_CURR" value="458">
+            <textarea name="MPI_MAC" id="MPI_MAC"></textarea>
+        </div>
+		
+        <input type="number" id="display_amt" step="0.01" placeholder="Enter Amount (e.g. 1.50)">
+        <input type="hidden" name="MPI_PURCH_AMT" id="MPI_PURCH_AMT">
+        
+        <button type="button" id="pay-btn" onclick="handlePay()">Pay Now</button>
+    </form>
+</div>
 
-    <script src="script.js"></script>
+<iframe name="payment-frame" id="payment-frame"></iframe>
+
+<script src="script.js"></script>
 </body>
 </html>
